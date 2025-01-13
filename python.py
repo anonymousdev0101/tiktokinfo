@@ -1,41 +1,42 @@
-import requests
-from bs4 import BeautifulSoup
-import streamlit as st
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+import time
 
 def fetch_tiktok_user_data(username):
-    url = f"https://www.tiktok.com/@{username}"
+    # Setup the Chrome driver
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 
-    # Send a GET request to the TikTok page
+    # Open the website
+    driver.get('https://omar-thing.nekoweb.org')
+
     try:
-        response = requests.get(url)
-        response.raise_for_status()  # Check if the request was successful
+        # Find the username input field and the "Fetch Data" button
+        username_input = driver.find_element(By.ID, 'usernameInput')
+        fetch_button = driver.find_element(By.ID, 'fetchButton')
 
-        # Parse the HTML content
-        soup = BeautifulSoup(response.text, 'html.parser')
+        # Enter the username and click "Fetch Data"
+        username_input.clear()
+        username_input.send_keys(username)
+        fetch_button.click()
 
-        # Extract data (we're looking for meta tags containing the user data)
-        user_data = {}
-        try:
-            user_data['followers'] = soup.find('strong', {'title': 'Followers'}).text
-            user_data['following'] = soup.find('strong', {'title': 'Following'}).text
-            user_data['likes'] = soup.find('strong', {'title': 'Likes'}).text
-        except AttributeError:
-            st.error("Could not retrieve the data from TikTok. Please check the username.")
-            return None
+        # Wait for the data to load (adjust the time as necessary)
+        time.sleep(5)
 
-        return user_data
-    
-    except requests.exceptions.RequestException as e:
-        st.error(f"Failed to fetch data: {e}")
-        return None
+        # Now, extract the result (you might need to inspect the DOM and adjust this)
+        # Example: extracting the result that may appear after clicking the button
+        result = driver.find_element(By.CLASS_NAME, 'result')  # Modify the selector based on the actual result
+        return result.text
 
-# Streamlit UI
-st.title("TikTok User Data Fetcher")
+    except Exception as e:
+        return f"An error occurred: {str(e)}"
+    finally:
+        # Close the browser after retrieving the data
+        driver.quit()
 
-username = st.text_input("Enter TikTok Username", "")
-
-if username:
-    data = fetch_tiktok_user_data(username)
-    if data:
-        st.write("User Data:")
-        st.write(data)
+# Example usage
+username = input("Enter TikTok username: ")
+result = fetch_tiktok_user_data(username)
+print(result)
