@@ -1,25 +1,41 @@
-import streamlit as st
 import requests
+from bs4 import BeautifulSoup
+import streamlit as st
 
-# Function to fetch TikTok user data
-def fetch_tiktok_data(username):
-    url = f'https://api.tiktok.com/user/{username}'  # Replace with the correct endpoint
-    response = requests.get(url)
+def fetch_tiktok_user_data(username):
+    url = f"https://www.tiktok.com/@{username}"
+
+    # Send a GET request to the TikTok page
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Check if the request was successful
+
+        # Parse the HTML content
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Extract data (we're looking for meta tags containing the user data)
+        user_data = {}
+        try:
+            user_data['followers'] = soup.find('strong', {'title': 'Followers'}).text
+            user_data['following'] = soup.find('strong', {'title': 'Following'}).text
+            user_data['likes'] = soup.find('strong', {'title': 'Likes'}).text
+        except AttributeError:
+            st.error("Could not retrieve the data from TikTok. Please check the username.")
+            return None
+
+        return user_data
     
-    if response.status_code == 200:
-        return response.json()  # Return the JSON data if the request is successful
-    else:
-        return None  # Return None if there's an error
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to fetch data: {e}")
+        return None
 
-# Streamlit UI elements
-st.title('TikTok User Data Fetcher')
+# Streamlit UI
+st.title("TikTok User Data Fetcher")
 
-username = st.text_input('Enter TikTok username:', '')
+username = st.text_input("Enter TikTok Username", "")
 
 if username:
-    data = fetch_tiktok_data(username)
-    
+    data = fetch_tiktok_user_data(username)
     if data:
-        st.write(data)  # Display the fetched data
-    else:
-        st.error('Failed to fetch data. Please check the username or try again later.')
+        st.write("User Data:")
+        st.write(data)
